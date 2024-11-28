@@ -1,0 +1,51 @@
+```{r Load Packages}
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
+library(tidycensus)
+library(dplyr)
+library(plyr)
+
+# Load ACS data
+census_api_key('CENSUS API KEY')
+acs22 <- load_variables(2022, "acs5", cache = FALSE)  
+
+```
+
+```{r Extracting the Data}
+# County-level data
+county_data <- get_acs(geography = "county", 
+                       variables = c('B01003_001'), 
+                       year = 2022, geometry = TRUE,
+                       output = "wide") %>%
+         filter(B01003_001E >= 50000) %>% # filter 
+         select(-B01003_001M) %>%
+         distinct()
+
+colnames(county_data)[3] <- "population" # rename variables
+county_data$state <- sub("^.*?,", "", county_data$NAME) 
+county_data$county <- gsub("(.*),.*", "\\1", county_data$NAME)
+
+county_data <- county_data[, c("GEOID", "NAME", "county", "state", "population", "geometry")] # rearrange the order of the columns
+
+write_csv(county_data, "~/Documents/county population data.csv") # save to csv file
+
+# City/Town data
+city_data <- get_acs(geography = "place",
+                       variables = c('B01003_001'), 
+                       year = 2022, geometry = TRUE,
+                       output = "wide") %>%
+         filter(B01003_001E >= 50000) %>%
+         select(-B01003_001M) %>%
+         distinct()
+
+colnames(city_data)[3] <- "population"
+city_data$state <- sub("^.*?,", "", city_data$NAME)
+city_data$city_town <- gsub("(.*),.*", "\\1", city_data$NAME)
+
+city_data <- city_data[, c("GEOID", "NAME", "city_town", "state", "population", "geometry")]
+
+write_csv(city_data, "~/Documents/city and town population data.csv")
+
+```
+
